@@ -145,6 +145,12 @@ def generate_confirm(row: dict) -> Path | None:
         ws.Activate()
 
         # Fill in all variable fields directly in Excel (images stay intact)
+        try:
+            confirm_id = 10**9 + int(str(trade_id).replace(",", ""))
+        except (ValueError, TypeError):
+            confirm_id = 10**9
+        ws.Cells(6, 13).Value = confirm_id
+
         if trade_date:
             date_str = trade_date.strftime("%m/%d/%Y")
             ws.Cells(4,  13).Value = date_str
