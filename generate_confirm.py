@@ -145,6 +145,12 @@ def generate_confirm(row: dict) -> Path | None:
         ws.Activate()
 
         # Fill in all variable fields directly in Excel (images stay intact)
+        try:
+            confirm_id = 10**9 + int(str(trade_id).replace(",", ""))
+        except (ValueError, TypeError):
+            confirm_id = 10**9
+        ws.Cells(6, 13).Value = confirm_id
+
         if trade_date:
             date_str = trade_date.strftime("%m/%d/%Y")
             ws.Cells(4,  13).Value = date_str
@@ -157,6 +163,11 @@ def generate_confirm(row: dict) -> Path | None:
         ws.Cells(26, 7).Value = price_val
         ws.Cells(28, 4).Value = volume
         ws.Cells(30, 4).Value = delivery_point
+
+        contact = row.get("Contact")
+        if contact:
+            # Sale: counterparty is Buyer (right side, col 12); Purchase: counterparty is Seller (left side, col 2)
+            ws.Cells(22, 2 if is_purchase else 12).Value = contact
 
         ws.ExportAsFixedFormat(0, str(pdf_path.resolve()))
         wbk.Close(False)  # discard — original template is never touched
