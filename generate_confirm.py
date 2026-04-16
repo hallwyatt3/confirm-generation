@@ -124,9 +124,9 @@ def generate_confirm(row: dict) -> Path | None:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     safe_cp   = re.sub(r"[^\w]", "_", counterparty)[:25].strip("_")
-    date_tag  = trade_date.strftime("%Y%m%d") if trade_date else "nodate"
+    date_tag  = trade_date.strftime("%Y-%m-%d") if trade_date else "nodate"
     temp_path = OUTPUT_DIR / f"_tmp_{trade_id}_{safe_cp}_{date_tag}.xlsx"
-    pdf_path  = OUTPUT_DIR / f"{trade_id}_{safe_cp}_{date_tag}.pdf"
+    pdf_path  = OUTPUT_DIR / f"{date_tag}_{safe_cp}_{trade_id}.pdf"
 
     # Remove any leftover files from a previous failed run
     temp_path.unlink(missing_ok=True)
