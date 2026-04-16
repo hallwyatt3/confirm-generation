@@ -164,6 +164,11 @@ def generate_confirm(row: dict) -> Path | None:
         ws.Cells(28, 4).Value = volume
         ws.Cells(30, 4).Value = delivery_point
 
+        contact = row.get("Contact")
+        if contact:
+            # Sale: counterparty is Buyer (right side, col 12); Purchase: counterparty is Seller (left side, col 2)
+            ws.Cells(22, 2 if is_purchase else 12).Value = contact
+
         ws.ExportAsFixedFormat(0, str(pdf_path.resolve()))
         wbk.Close(False)  # discard — original template is never touched
     finally:
