@@ -91,9 +91,8 @@ def sync():
 if __name__ == "__main__":
     print("Smartsheet monitor started (interval: 30 min).")
     print("PDFs will be saved to: confirmations/")
-    while True:
-        try:
-            sync()
-        except Exception as e:
-            print(f"  [ERROR] {e}")
-        time.sleep(POLL_SECONDS)
+    try:
+        sync()
+    except Exception as e:
+        print(f"  [ERROR] {e}")
+    time.sleep(POLL_SECONDS)
