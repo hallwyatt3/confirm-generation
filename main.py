@@ -1,6 +1,6 @@
 import requests
 import sqlite3
-import time
+import win32com.client
 from pathlib import Path
 from datetime import datetime
 
@@ -9,7 +9,9 @@ from generate_confirm import generate_confirm
 SMARTSHEET_ID = "934997499268996"
 API_TOKEN     = "96Jh9H2na9PfQCY1ruVKK0vos5RZwaGQBLMqZ"
 DB_PATH       = Path(__file__).parent / "trade_book.db"
-POLL_SECONDS  = 30 * 60  # every 30 minutes
+
+TO_ADDRESS = "jamie.huffman@vickeryenergy.com"
+CC_ADDRESS = "wyatt.hall@vickeryenergy.com"
 
 headers = {"Authorization": f"Bearer {API_TOKEN}"}
 
@@ -61,6 +63,36 @@ def save_rows(con, flat_rows, col_names):
     con.commit()
 
 
+def send_email(pdf_paths: list[Path], new_rows: list[dict]):
+    """Send all generated PDFs to Jamie in a single email via Outlook."""
+    today = datetime.now().strftime("%m/%d/%Y")
+    n     = len(pdf_paths)
+
+    subject = f"Trade Confirmation{'s' if n > 1 else ''} - {today} ({n} new trade{'s' if n > 1 else ''})"
+
+    lines = ["Please find attached the following new trade confirmation(s):\n"]
+    for row in new_rows:
+        lines.append(
+            f"  Trade {row.get('Trade ID')} | {row.get('Counterparty')} | "
+            f"{row.get('Direction')} | {row.get('Volume (MMBtu/d)')} MMBtu/d"
+        )
+    lines.append("\nThis is an automated message generated from Smartsheet.")
+    body = "\n".join(lines)
+
+    outlook = win32com.client.Dispatch("Outlook.Application")
+    mail    = outlook.CreateItem(0)  # olMailItem
+    mail.To      = TO_ADDRESS
+    mail.CC      = CC_ADDRESS
+    mail.Subject = subject
+    mail.Body    = body
+
+    for pdf in pdf_paths:
+        mail.Attachments.Add(str(pdf.resolve()))
+
+    mail.Send()
+    print(f"  [OK] Email sent to {TO_ADDRESS} (CC: {CC_ADDRESS}) with {n} attachment(s)")
+
+
 def sync():
     print(f"[{datetime.now():%H:%M:%S}] Checking Smartsheet...")
 
@@ -77,22 +109,27 @@ def sync():
         return
 
     print(f"  {len(new_rows)} new row(s):")
+    pdf_paths = []
     for row in new_rows:
         print(
             f"    Trade {row.get('Trade ID')} | {row.get('Counterparty')} | "
             f"{row.get('Direction')} | {row.get('Volume (MMBtu/d)')} MMBtu/d"
         )
-        generate_confirm(row)
+        pdf = generate_confirm(row)
+        if pdf:
+            pdf_paths.append(pdf)
 
     save_rows(con, new_rows, col_names)
     con.close()
 
+    if pdf_paths:
+        send_email(pdf_paths, new_rows)
+
 
 if __name__ == "__main__":
-    print("Smartsheet monitor started (interval: 30 min).")
+    print("Running confirmation sync...")
     print("PDFs will be saved to: confirmations/")
     try:
         sync()
     except Exception as e:
         print(f"  [ERROR] {e}")
-    time.sleep(POLL_SECONDS)
