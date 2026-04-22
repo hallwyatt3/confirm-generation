@@ -115,9 +115,14 @@ def sync():
             f"    Trade {row.get('Trade ID')} | {row.get('Counterparty')} | "
             f"{row.get('Direction')} | {row.get('Volume (MMBtu/d)')} MMBtu/d"
         )
-        pdf = generate_confirm(row)
-        if pdf:
-            pdf_paths.append(pdf)
+        try:
+            pdf = generate_confirm(row)
+            if pdf:
+                pdf_paths.append(pdf)
+        except Exception as e:
+            print(f"      [WARN] Failed to generate PDF: {e}")
+
+    print(f"  {len(pdf_paths)} PDF(s) generated, sending email...")
 
     save_rows(con, new_rows, col_names)
     con.close()
