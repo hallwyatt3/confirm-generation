@@ -45,6 +45,12 @@ def init_db(con, col_names):
             synced_at TEXT DEFAULT (datetime('now'))
         )
     """)
+    # Auto-add any new Smartsheet columns that aren't in the table yet
+    existing = {row[1] for row in con.execute("PRAGMA table_info(trades)").fetchall()}
+    for col in col_names:
+        if col not in existing:
+            con.execute(f'ALTER TABLE trades ADD COLUMN "{col}" TEXT')
+            print(f"  [DB] Added new column: {col}")
     con.commit()
 
 
@@ -134,11 +140,11 @@ def sync():
 
     print(f"  {len(pdf_paths)} PDF(s) generated, sending email...")
 
-    save_rows(con, new_rows, col_names)
-    con.close()
-
     if pdf_paths:
         send_email(pdf_paths, new_rows)
+
+    save_rows(con, new_rows, col_names)
+    con.close()
 
 
 if __name__ == "__main__":
