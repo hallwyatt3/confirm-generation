@@ -1,6 +1,8 @@
+import gc
 import requests
 import sqlite3
 import win32com.client
+import pythoncom
 from pathlib import Path
 from datetime import datetime
 
@@ -79,6 +81,10 @@ def send_email(pdf_paths: list[Path], new_rows: list[dict]):
     lines.append("\nThis is an automated message generated from Smartsheet.")
     body = "\n".join(lines)
 
+    # Force cleanup of any lingering Excel COM references before touching Outlook
+    gc.collect()
+    pythoncom.CoInitialize()
+
     outlook = win32com.client.Dispatch("Outlook.Application")
     mail    = outlook.CreateItem(0)  # olMailItem
     mail.To      = TO_ADDRESS
@@ -90,6 +96,10 @@ def send_email(pdf_paths: list[Path], new_rows: list[dict]):
         mail.Attachments.Add(str(pdf.resolve()))
 
     mail.Send()
+
+    # Force Outlook to push the email out of Outbox immediately
+    outlook.GetNamespace("MAPI").SendAndReceive(False)
+
     print(f"  [OK] Email sent to {TO_ADDRESS} (CC: {CC_ADDRESS}) with {n} attachment(s)")
 
 
